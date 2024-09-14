@@ -39,8 +39,10 @@ class Algorithm():
 
         # IMPLEMENT CODE HERE TO DECIDE WHAT POSITIONS YOU WANT 
         #######################################################################
-        # Buy thrifted jeans maximum amount
-        desiredPositions["Thrifted Jeans"] = positionLimits["Thrifted Jeans"]
+        if self.day%7 == 3:
+            desiredPositions['Fun Drink'] = self.positionLimits['Fun Drink']
+        elif self.day%7 == 4:
+            desiredPositions['Fun Drink'] = -self.positionLimits['Fun Drink']
 
         #######################################################################
         # Return the desired positions
