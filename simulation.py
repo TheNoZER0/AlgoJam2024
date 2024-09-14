@@ -287,3 +287,12 @@ if __name__ == "__main__":
     engine.run_algorithms(algorithmInstance)
     engine.plot_returns()
 
+    # read engine.positions into a df for Goober Eats
+    goober_df = pd.DataFrame(engine.positions["Goober Eats"])
+    goober_df['Day'] = goober_df.index
+    # record the change in positions
+    goober_df['Change'] = goober_df['Goober Eats'].diff()
+    goober_df['CashFlow'] = -goober_df['Change'] * goober_df['Goober Eats']
+    goober_df['CashPos'] = goober_df['CashFlow'].cumsum()
+
+

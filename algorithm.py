@@ -45,7 +45,7 @@ class Algorithm():
         # desiredPositions["UQ Dollar"] = self.get_uq_dollar_position(currentPositions["UQ Dollar"], positionLimits["UQ Dollar"])
         
         goober_df = pd.DataFrame(self.data["Goober Eats"])
-        goober_df['EMA5'] = goober_df[0].ewm(span=4, adjust=False).mean()
+        goober_df['EMA5'] = goober_df[0].ewm(span=13, adjust=False).mean()
         # Buy if the price is above the 5 day EMA
         price = self.data['Goober Eats'][-1]
         ema = goober_df['EMA5'].iloc[-1]
