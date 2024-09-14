@@ -54,10 +54,10 @@ class Algorithm():
         boundary = max(self.data["UQ Dollar"]) - avg
         print(f"boundary: {boundary}")
 
-        if diff > 0.15:
-            delta = limit * 2 # int(np.exp(diff / boundary * 2) * limit)
-        elif diff < -0.15:
-            delta = -2 * limit # int(np.exp(abs(diff) / boundary * 2) * limit)
+        if diff > 0.24:
+            delta = limit * 2
+        elif diff < -0.24:
+            delta = -2 * limit
         else:
             delta = 0
 
