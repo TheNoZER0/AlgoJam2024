@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 
 # Custom trading Algorithm
 class Algorithm():
@@ -41,6 +42,17 @@ class Algorithm():
         #######################################################################
         # Buy thrifted jeans maximum amount
         desiredPositions["UQ Dollar"] = self.get_uq_dollar_position(currentPositions["UQ Dollar"], positionLimits["UQ Dollar"])
+        
+        desiredPositions["Thrifted Jeans"] = positionLimits["Thrifted Jeans"]
+        jeans_df = pd.DataFrame(self.data["Thrifted Jeans"])
+        jeans_df['EMA5'] = jeans_df[0].ewm(span=4, adjust=False).mean()
+        # Buy if the price is above the 5 day EMA
+        price = self.data['Thrifted Jeans'][-1]
+        ema = jeans_df['EMA5'].iloc[-1]
+        if price > ema:
+            desiredPositions["Thrifted Jeans"] = -positionLimits["Thrifted Jeans"]
+        else:
+            desiredPositions["Thrifted Jeans"] = positionLimits["Thrifted Jeans"]
 
         #######################################################################
         # Return the desired positions
