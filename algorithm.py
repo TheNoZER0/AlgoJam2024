@@ -40,8 +40,34 @@ class Algorithm():
         # IMPLEMENT CODE HERE TO DECIDE WHAT POSITIONS YOU WANT 
         #######################################################################
         # Buy thrifted jeans maximum amount
-        desiredPositions["Thrifted Jeans"] = positionLimits["Thrifted Jeans"]
+        desiredPositions["UQ Dollar"] = self.get_uq_dollar_position(currentPositions["UQ Dollar"], positionLimits["UQ Dollar"])
 
         #######################################################################
         # Return the desired positions
         return desiredPositions
+    
+    def get_uq_dollar_position(self, currentPosition, limit):
+
+        avg = sum(self.data["UQ Dollar"][-4:]) / 4
+        price = self.get_current_price("UQ Dollar")
+        diff = avg - price
+        boundary = max(self.data["UQ Dollar"]) - avg
+        print(f"boundary: {boundary}")
+
+        if diff > 0.15:
+            delta = limit * 2 # int(np.exp(diff / boundary * 2) * limit)
+        elif diff < -0.15:
+            delta = -2 * limit # int(np.exp(abs(diff) / boundary * 2) * limit)
+        else:
+            delta = 0
+
+        if currentPosition + delta > limit:
+            desiredPosition = limit
+        elif currentPosition + delta < -1 * limit:
+            desiredPosition = -1 * limit
+        else:
+            desiredPosition = currentPosition + delta
+
+        print(f"OLD: {currentPosition}, NEW: {desiredPosition}")
+
+        return desiredPosition
