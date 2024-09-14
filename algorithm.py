@@ -42,19 +42,21 @@ class Algorithm():
         # IMPLEMENT CODE HERE TO DECIDE WHAT POSITIONS YOU WANT 
         #######################################################################
         # Buy thrifted jeans maximum amount
-        desiredPositions["UQ Dollar"] = self.get_uq_dollar_position(currentPositions["UQ Dollar"], positionLimits["UQ Dollar"])
+        # desiredPositions["UQ Dollar"] = self.get_uq_dollar_position(currentPositions["UQ Dollar"], positionLimits["UQ Dollar"])
         
-        jeans_df = pd.DataFrame(self.data["Thrifted Jeans"])
-        jeans_df['EMA5'] = jeans_df[0].ewm(span=4, adjust=False).mean()
-        # Buy if the price is above the 5 day EMA
-        price = self.data['Thrifted Jeans'][-1]
-        ema = jeans_df['EMA5'].iloc[-1]
-        if price > ema:
-            desiredPositions["Thrifted Jeans"] = -positionLimits["Thrifted Jeans"]
-        else:
-            desiredPositions["Thrifted Jeans"] = positionLimits["Thrifted Jeans"]
+        # jeans_df = pd.DataFrame(self.data["Thrifted Jeans"])
+        # jeans_df['EMA5'] = jeans_df[0].ewm(span=4, adjust=False).mean()
+        # # Buy if the price is above the 5 day EMA
+        # price = self.data['Thrifted Jeans'][-1]
+        # ema = jeans_df['EMA5'].iloc[-1]
+        # if price > ema:
+        #     desiredPositions["Thrifted Jeans"] = -positionLimits["Thrifted Jeans"]
+        # else:
+        #     desiredPositions["Thrifted Jeans"] = positionLimits["Thrifted Jeans"]
 
-        desiredPositions["Red Pens"] = self.get_red_pens_position(currentPositions["Red Pens"], positionLimits["Red Pens"])
+        # desiredPositions["Red Pens"] = self.get_red_pens_position(currentPositions["Red Pens"], positionLimits["Red Pens"])
+
+        desiredPositions["Fintech Token"] = self.get_token_position(currentPositions["Fintech Token"], positionLimits["Fintech Token"])
 
         #######################################################################
         # Return the desired positions
@@ -114,3 +116,57 @@ class Algorithm():
             desiredPosition = currentPosition
 
         return desiredPosition
+    
+    def get_token_position(self, currentPosition, limit):
+
+        step = 35
+
+        if self.day < 10:
+            return currentPosition
+
+        # Split the list into two halves
+        first_half = self.data["Fintech Token"][-10:-5]
+        second_half = self.data["Fintech Token"][-5:]
+
+        # Calculate the gradients for each half
+        first_grad = self.calculate_gradient(first_half)
+        second_grad = self.calculate_gradient(second_half)
+
+        lim = 18
+
+        # Going from a stable section to jumping up
+        if abs(first_grad) < lim and second_grad > lim:
+            delta = step
+        # Going from a stable section to jumping down
+        elif abs(first_grad) < lim and second_grad < -1 * lim:
+            delta = -1 * step
+        else:
+            delta = 0
+
+        if currentPosition + delta > limit:
+            desiredPosition = limit
+        elif currentPosition + delta < -1 * limit:
+            desiredPosition = -1 * limit
+        else:
+            desiredPosition = currentPosition + delta
+
+        return desiredPosition
+
+    # Function to calculate linear extrapolation
+    def linear_extrapolation(self, values):
+        if len(values) < 5:
+            return np.nan  # Not enough data to extrapolate
+        x = np.arange(5)
+        y = values[-6:-1]
+        coeffs = np.polyfit(x, y, 1)  # Linear fit (degree 1)
+        extrapolated_value = np.polyval(coeffs, 5)  # Extrapolate to the next point
+        return extrapolated_value
+    
+    def calculate_gradient(self, values):
+        x = np.arange(5)  # Create an array [0, 1, 2, 3, 4] for 5 prices
+        y = np.array(values)
+        # Fit a linear model: y = mx + c
+        A = np.vstack([x, np.ones(len(x))]).T
+        m, c = np.linalg.lstsq(A, y, rcond=None)[0]
+
+        return m
