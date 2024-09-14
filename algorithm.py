@@ -22,11 +22,10 @@ class Algorithm():
         self.var_model = None
         self.scaler = StandardScaler()
         self.lookback = 15
-        self.threshold = 0.01
+        self.threshold = 0.0005  # Lowered threshold for increased sensitivity
         self.lag_order = 1
         self.var_instruments = ['Coffee Beans', 'Milk', 'Coffee']
-        self.momentum_window = 5
-        self.momentum_threshold = 0.02
+        self.totalDailyBudget = 500000  # Define total daily budget
 
     # Helper function to fetch the current price of an instrument
     def get_current_price(self, instrument):
@@ -35,26 +34,21 @@ class Algorithm():
 
     # HELPER METHODS
 
-    # VAR model for Coffee Beans, Milk, Coffee
-    def apply_var_model(self, var_instruments, positionLimits, desiredPositions):
+    # Regression model for Coffee
+    def apply_regression_model(self, positionLimits, desiredPositions):
         if self.day >= self.lookback:
-            var_data = np.array([self.data[inst] for inst in var_instruments if inst in self.data]).T
-            if len(var_data) > self.lookback:
-                diff_data = np.diff(var_data, axis=0) / var_data[:-1]
-                scaled_data = self.scaler.fit_transform(diff_data)
-
-                if self.var_model is None:
-                    self.var_model = VAR(scaled_data)
-
-                results = self.var_model.fit(self.lag_order)
-                forecast = results.forecast(scaled_data[-1:], steps=1)[0]
-
-                for i, instrument in enumerate(var_instruments):
-                    if instrument in positionLimits:
-                        if forecast[i] > self.threshold:
-                            desiredPositions[instrument] = positionLimits[instrument]  # Buy
-                        elif forecast[i] < -self.threshold:
-                            desiredPositions[instrument] = -positionLimits[instrument]  # Sell
+            # Get the most recent prices
+            coffee_bean_price = self.data['Coffee Beans'][-1]
+            milk_price = self.data['Milk'][-1]
+            # Use the regression equation
+            predicted_coffee_price = 1.5649 + 0.0077 * coffee_bean_price + 0.1565 * milk_price
+            current_coffee_price = self.get_current_price('Coffee')
+            # Decide on the position based on the predicted price
+            price_diff = predicted_coffee_price - current_coffee_price
+            if abs(price_diff) > self.threshold:
+                # Use full position limit
+                position = positionLimits['Coffee'] if price_diff > 0 else -positionLimits['Coffee']
+                desiredPositions['Coffee'] = position
 
     # ARIMA model for trend-based instruments
     def apply_arima_model(self, instrument, positionLimits, desiredPositions, p=1, d=1, q=1):
@@ -65,10 +59,25 @@ class Algorithm():
             forecast = model_fit.forecast(steps=1)[0]
 
             current_price = self.get_current_price(instrument)
-            if forecast > current_price * (1 + self.threshold):
-                desiredPositions[instrument] = positionLimits[instrument]  # Buy
-            elif forecast < current_price * (1 - self.threshold):
-                desiredPositions[instrument] = -positionLimits[instrument]  # Sell
+            price_diff = forecast - current_price
+            if abs(price_diff) > self.threshold * current_price:
+                # Use full position limit
+                position = positionLimits[instrument] if price_diff > 0 else -positionLimits[instrument]
+                desiredPositions[instrument] = position
+
+    # Adjust positions to stay within budget
+    def adjust_positions_for_budget(self, desiredPositions):
+        total_value = 0
+        prices = {inst: self.get_current_price(inst) for inst in desiredPositions}
+        # Calculate total value of desired positions
+        for inst, pos in desiredPositions.items():
+            total_value += abs(pos * prices[inst])
+        # If over budget, scale down positions proportionally
+        if total_value > self.totalDailyBudget:
+            scaling_factor = self.totalDailyBudget / total_value
+            for inst in desiredPositions:
+                desiredPositions[inst] = int(desiredPositions[inst] * scaling_factor)
+        return desiredPositions
 
     # RETURN DESIRED POSITIONS IN DICT FORM
     def get_positions(self):
@@ -83,15 +92,15 @@ class Algorithm():
         for instrument, positionLimit in positionLimits.items():
             desiredPositions[instrument] = 0
 
-        # Apply VAR Model for Coffee Beans, Milk, Coffee
-        self.apply_var_model(self.var_instruments, positionLimits, desiredPositions)
+        # Apply Regression Model for Coffee
+        self.apply_regression_model(positionLimits, desiredPositions)
 
-        # Apply ARIMA for trending instruments (Thrifted Jeans, Red Pens, Goober Eats, UQ Dollar, Fun Drink)
-        self.apply_arima_model("Thrifted Jeans", positionLimits, desiredPositions)
-        self.apply_arima_model("Red Pens", positionLimits, desiredPositions)
-        self.apply_arima_model("Goober Eats", positionLimits, desiredPositions)
-        self.apply_arima_model("UQ Dollar", positionLimits, desiredPositions)
-        self.apply_arima_model("Fun Drink", positionLimits, desiredPositions)
+        # Apply ARIMA for Coffee Beans and Milk
+        self.apply_arima_model("Coffee Beans", positionLimits, desiredPositions)
+        self.apply_arima_model("Milk", positionLimits, desiredPositions)
+
+        # Adjust positions for budget
+        desiredPositions = self.adjust_positions_for_budget(desiredPositions)
 
         return desiredPositions
 
