@@ -72,12 +72,29 @@ class Algorithm():
         #     desiredPosition = 0.95 * limit
         # elif avg < 2.23 and price > 2.21 and currentPosition > 0.9 * limit:
         #     desiredPosition = 0.85 * limit
-        if price < 2.2:
-            desiredPosition = limit
-        elif price > 2.45:
-            desiredPosition = -1 * limit
+
+        # GOOD: Total PNL ($): 112400.00
+        if self.day < 40 or self.day > 330:
+            avg = sum(self.data["Red Pens"][-4:]) / 4
+            price = self.get_current_price("Red Pens")
+            diff = avg - price
+            boundary = max(self.data["Red Pens"]) - avg
+            print(f"boundary: {boundary}")
+
+            if diff > 0.01:
+                desiredPosition = limit
+            elif diff < -0.01:
+                desiredPosition = -1 * limit
+            else:
+                desiredPosition = currentPosition
+
         else:
-            desiredPosition = currentPosition
+            if price < 2.2:
+                desiredPosition = limit
+            elif price > 2.45:
+                desiredPosition = -1 * limit
+            else:
+                desiredPosition = currentPosition
 
         print(f"Old position: {currentPosition}, new position: {desiredPosition}")
 
