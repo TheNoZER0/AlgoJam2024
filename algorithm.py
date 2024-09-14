@@ -40,12 +40,23 @@ class Algorithm():
         # IMPLEMENT CODE HERE TO DECIDE WHAT POSITIONS YOU WANT 
         #######################################################################
         # Buy thrifted jeans maximum amount
-        desiredPositions["UQ Dollar"] = get_uq_dollar_position(currentPositions["UQ Dollar"], positionLimits["UQ Dollar"])
+        desiredPositions["UQ Dollar"] = self.get_uq_dollar_position(currentPositions["UQ Dollar"], positionLimits["UQ Dollar"])
 
         #######################################################################
         # Return the desired positions
         return desiredPositions
     
-def get_uq_dollar_position(self, currentPosition, limit):
+    def get_uq_dollar_position(self, currentPosition, limit):
 
-    return 1 # desiredPosition
+        avg = sum(self.data["UQ Dollar"][-5:]) / 5
+        price = self.get_current_price("UQ Dollar")
+        diff = avg - price
+
+        if diff > 0.5:
+            desiredPosition = limit
+        elif diff < 0.5:
+            desiredPosition = -1 * limit
+        else:
+            desiredPosition = currentPosition
+
+        return desiredPosition
