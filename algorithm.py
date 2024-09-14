@@ -1,5 +1,5 @@
 import numpy as np
-from statsmodels.tsa.api import VAR
+from statsmodels.tsa.api import VAR, ARIMA
 from sklearn.preprocessing import StandardScaler
 import pandas as pd
 
@@ -12,7 +12,6 @@ class Algorithm():
     # FUNCTION TO SETUP ALGORITHM CLASS
     def __init__(self, positions):
         # Initialise data stores:
-        # Historical data of all instruments
         self.data = {}
         # Initialise position limits
         self.positionLimits = {}
@@ -29,91 +28,85 @@ class Algorithm():
         self.momentum_window = 5
         self.momentum_threshold = 0.02
 
-        
-        
-
     # Helper function to fetch the current price of an instrument
     def get_current_price(self, instrument):
-        # return most recent price
         return self.data[instrument][-1]
     ########################################################
 
     # HELPER METHODS
-    
-    
-    
+
+    # VAR model for Coffee Beans, Milk, Coffee
+    def apply_var_model(self, var_instruments, positionLimits, desiredPositions):
+        if self.day >= self.lookback:
+            var_data = np.array([self.data[inst] for inst in var_instruments if inst in self.data]).T
+            if len(var_data) > self.lookback:
+                diff_data = np.diff(var_data, axis=0) / var_data[:-1]
+                scaled_data = self.scaler.fit_transform(diff_data)
+
+                if self.var_model is None:
+                    self.var_model = VAR(scaled_data)
+
+                results = self.var_model.fit(self.lag_order)
+                forecast = results.forecast(scaled_data[-1:], steps=1)[0]
+
+                for i, instrument in enumerate(var_instruments):
+                    if instrument in positionLimits:
+                        if forecast[i] > self.threshold:
+                            desiredPositions[instrument] = positionLimits[instrument]  # Buy
+                        elif forecast[i] < -self.threshold:
+                            desiredPositions[instrument] = -positionLimits[instrument]  # Sell
+
+    # ARIMA model for trend-based instruments
+    def apply_arima_model(self, instrument, positionLimits, desiredPositions, p=1, d=1, q=1):
+        if self.day >= self.lookback:
+            data = np.array(self.data[instrument])
+            model = ARIMA(data, order=(p, d, q))
+            model_fit = model.fit()
+            forecast = model_fit.forecast(steps=1)[0]
+
+            current_price = self.get_current_price(instrument)
+            if forecast > current_price * (1 + self.threshold):
+                desiredPositions[instrument] = positionLimits[instrument]  # Buy
+            elif forecast < current_price * (1 - self.threshold):
+                desiredPositions[instrument] = -positionLimits[instrument]  # Sell
+
     # RETURN DESIRED POSITIONS IN DICT FORM
     def get_positions(self):
         # Get current position
         currentPositions = self.positions
         # Get position limits
         positionLimits = self.positionLimits
-        
+
         # Declare a store for desired positions
         desiredPositions = {}
-        # Loop through all the instruments you can take positions on.
+        # Initialise to hold positions for all instruments
         for instrument, positionLimit in positionLimits.items():
-            # For each instrument initilise desired position to zero
             desiredPositions[instrument] = 0
 
-        # IMPLEMENT CODE HERE TO DECIDE WHAT POSITIONS YOU WANT 
-        #######################################################################
-        # Buy thrifted jeans maximum amount
-        #desiredPositions["Thrifted Jeans"] = positionLimits["Thrifted Jeans"]
-        
-        # Coffee Milk and Beans VAR model
-        if self.day >= self.lookback:
-            var_data = np.array([self.data[inst] for inst in self.var_instruments if inst in self.data]).T
-            if len(var_data) > self.lookback:
-                diff_data = np.diff(var_data, axis=0) / var_data[:-1]
-                scaled_data = self.scaler.fit_transform(diff_data)
-                
-                if self.var_model is None:
-                    self.var_model = VAR(scaled_data)
-                
-                results = self.var_model.fit(self.lag_order)
-                forecast = results.forecast(scaled_data[-1:], steps=1)[0]
-                
-                for i, instrument in enumerate(self.var_instruments):
-                    if instrument in positionLimits:
-                        if forecast[i] > self.threshold:
-                            desiredPositions[instrument] = positionLimits[instrument]  # Buy
-                        elif forecast[i] < -self.threshold:
-                            desiredPositions[instrument] = -positionLimits[instrument]  # Sell
-        
-        #######################################################################
-        # Other strategies
-        # desiredPositions["UQ Dollar"] = self.get_uq_dollar_position(currentPositions["UQ Dollar"], positionLimits["UQ Dollar"])
-        
-        # desiredPositions["Thrifted Jeans"] = positionLimits["Thrifted Jeans"]
-        # jeans_df = pd.DataFrame(self.data["Thrifted Jeans"])
-        # jeans_df['EMA5'] = jeans_df[0].ewm(span=4, adjust=False).mean()
-        # # Buy if the price is above the 5 day EMA
-        # price = self.data['Thrifted Jeans'][-1]
-        # ema = jeans_df['EMA5'].iloc[-1]
-        # if price > ema:
-        #     desiredPositions["Thrifted Jeans"] = -positionLimits["Thrifted Jeans"]
-        # else:
-        #     desiredPositions["Thrifted Jeans"] = positionLimits["Thrifted Jeans"]
+        # Apply VAR Model for Coffee Beans, Milk, Coffee
+        self.apply_var_model(self.var_instruments, positionLimits, desiredPositions)
 
-        # desiredPositions["Red Pens"] = self.get_red_pens_position(currentPositions["Red Pens"], positionLimits["Red Pens"])
+        # Apply ARIMA for trending instruments (Thrifted Jeans, Red Pens, Goober Eats, UQ Dollar, Fun Drink)
+        self.apply_arima_model("Thrifted Jeans", positionLimits, desiredPositions)
+        self.apply_arima_model("Red Pens", positionLimits, desiredPositions)
+        self.apply_arima_model("Goober Eats", positionLimits, desiredPositions)
+        self.apply_arima_model("UQ Dollar", positionLimits, desiredPositions)
+        self.apply_arima_model("Fun Drink", positionLimits, desiredPositions)
 
-        #######################################################################
-        # Return the desired positions
         return desiredPositions
-    
-    def get_uq_dollar_position(self, currentPosition, limit):
 
+    #######################################################################
+
+    def get_uq_dollar_position(self, currentPosition, limit):
         avg = sum(self.data["UQ Dollar"][-4:]) / 4
         price = self.get_current_price("UQ Dollar")
         diff = avg - price
         boundary = max(self.data["UQ Dollar"]) - avg
-        print(f"boundary: {boundary}")
 
         if diff > 0.15:
-            delta = limit * 2 # int(np.exp(diff / boundary * 2) * limit)
+            delta = limit * 2
         elif diff < -0.15:
-            delta = -2 * limit # int(np.exp(abs(diff) / boundary * 2) * limit)
+            delta = -2 * limit
         else:
             delta = 0
 
@@ -127,28 +120,9 @@ class Algorithm():
         print(f"OLD: {currentPosition}, NEW: {desiredPosition}")
         
     def get_red_pens_position(self, currentPosition, limit):
-
-        # avg = self.penData.rolling(window=10, min_periods=1, on="Price").mean().at[self.day, "Price"]
-        # price = self.penData.at[self.day, "Price"]
         avg = sum(self.data["Red Pens"][-10:]) / 10
         price = self.get_current_price("Red Pens")
 
-        # Easy cases, these are great deals
-        # if price < 2.19:
-        #     desiredPosition = limit
-        # elif price > 2.46:
-        #     desiredPosition = -1 * limit
-        # # Going up the slopes, if we for some reason haven't bought
-        # elif avg > 2.23 and price > 2.24 and currentPosition < limit:
-        #     desiredPosition = limit
-        # # Going down the slopes, if we for some reason haven't sold
-        # elif avg < 4.45 and price < 2.44 and currentPosition > -1 * limit:
-        #     desiredPosition = -1 * limit
-        # # If we're in the flat sections
-        # elif avg < 2.23 and price < 2.2 and currentPosition < 0.9 * limit:
-        #     desiredPosition = 0.95 * limit
-        # elif avg < 2.23 and price > 2.21 and currentPosition > 0.9 * limit:
-        #     desiredPosition = 0.85 * limit
         if price < 2.2:
             desiredPosition = limit
         elif price > 2.45:
