@@ -21,11 +21,11 @@ class Algorithm():
         self.positions = positions
         self.var_model = None
         self.scaler = StandardScaler()
-        self.lookback = 15
-        self.threshold = 0.0005  # Lowered threshold for increased sensitivity
+        self.lookback = 1.1
+        self.threshold = 0.0002  # Lowered threshold for increased sensitivity
         self.lag_order = 1
         self.var_instruments = ['Coffee Beans', 'Milk', 'Coffee']
-        self.totalDailyBudget = 500000  # Define total daily budget
+        self.totalDailyBudget = 500000 
 
     # Helper function to fetch the current price of an instrument
     def get_current_price(self, instrument):
