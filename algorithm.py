@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 
 # Custom trading Algorithm
 class Algorithm():
@@ -39,10 +40,20 @@ class Algorithm():
 
         # IMPLEMENT CODE HERE TO DECIDE WHAT POSITIONS YOU WANT 
         #######################################################################
-        if self.day%7 == 3:
-            desiredPositions['Fun Drink'] = self.positionLimits['Fun Drink']
-        elif self.day%7 == 4:
-            desiredPositions['Fun Drink'] = -self.positionLimits['Fun Drink']
+        # if self.day%7 == 3:
+        #     desiredPositions['Fun Drink'] = self.positionLimits['Fun Drink']
+        # elif self.day%7 == 4:
+        #     desiredPositions['Fun Drink'] = -self.positionLimits['Fun Drink']
+        # else:
+        drink_df = pd.DataFrame(self.data["Fun Drink"])
+        drink_df['EMA'] = drink_df[0].ewm(span=5, adjust=False).mean()
+        # Buy if the price is above the 5 day EMA
+        price = self.data['Fun Drink'][-1]
+        ema = drink_df['EMA'].iloc[-1]
+        if price > ema:
+            desiredPositions["Fun Drink"] = -positionLimits["Fun Drink"]
+        else:
+            desiredPositions["Fun Drink"] = positionLimits["Fun Drink"]
 
         #######################################################################
         # Return the desired positions
