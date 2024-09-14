@@ -1,0 +1,61 @@
+# Python Bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pdb
+*.egg
+*.egg-info
+*.env
+*.venv
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Virtual Environment
+venv/
+ENV/
+env/
+.venv/
+
+# VS Code settings
+.vscode/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# MacOS system files
+.DS_Store
+
+# Windows system files
+Thumbs.db
+
+# PyCharm
+.idea/
+
+# Python Tests
+test-results/
+coverage/
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pylint
+pylint.log
+
+# Log files
+*.log
+
+# Environment variables
+.env
+
+# Docker
+docker-compose.override.yml
+Dockerfile
+docker-compose.yml
+
