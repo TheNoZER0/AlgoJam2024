@@ -4,14 +4,7 @@ from sklearn.preprocessing import StandardScaler
 import pandas as pd
 from statsmodels.tsa.api import VAR, ARIMA
 from sklearn.preprocessing import StandardScaler
-from statsmodels.tools.sm_exceptions import ConvergenceWarning
-import warnings
 
-# Suppress only ConvergenceWarnings from statsmodels
-warnings.simplefilter('ignore', ConvergenceWarning)
-
-# supress all warnings
-warnings.filterwarnings("ignore")
 
 # Custom trading Algorithm
 class Algorithm():
