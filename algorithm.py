@@ -22,7 +22,7 @@ class Algorithm():
         self.var_model = None
         self.scaler = StandardScaler()
         self.lookback = 1.1
-        self.threshold = 0.0002  # Lowered threshold for increased sensitivity
+        self.threshold = 0.0005  # Lowered threshold for increased sensitivity
         self.lag_order = 1
         self.var_instruments = ['Coffee Beans', 'Milk', 'Coffee']
         self.totalDailyBudget = 500000 
@@ -92,10 +92,8 @@ class Algorithm():
         for instrument, positionLimit in positionLimits.items():
             desiredPositions[instrument] = 0
 
-<<<<<<< HEAD
         # Apply Regression Model for Coffee
         self.apply_regression_model(positionLimits, desiredPositions)
-=======
         # IMPLEMENT CODE HERE TO DECIDE WHAT POSITIONS YOU WANT 
         #######################################################################
         # Buy thrifted jeans maximum amount
@@ -110,11 +108,17 @@ class Algorithm():
             desiredPositions["Thrifted Jeans"] = -positionLimits["Thrifted Jeans"]
         else:
             desiredPositions["Thrifted Jeans"] = positionLimits["Thrifted Jeans"]
->>>>>>> bd25b7cffe6c578da8943ef9b2a7b45cd1b505f5
 
         # Apply ARIMA for Coffee Beans and Milk
         self.apply_arima_model("Coffee Beans", positionLimits, desiredPositions)
         self.apply_arima_model("Milk", positionLimits, desiredPositions)
+        self.apply_arima_model("Fun Drink", positionLimits, desiredPositions)
+        self.apply_arima_model("Red Pens", positionLimits, desiredPositions, p=1, d=1, q=0)
+        get_red_pens_position = self.get_red_pens_position(currentPositions["Red Pens"], positionLimits["Red Pens"])
+        desiredPositions["Red Pens"] = get_red_pens_position
+        #self.apply_arima_model("Red Pens", positionLimits, desiredPositions, p=1, d=1, q=0)
+        self.apply_arima_model("Goober Eats", positionLimits, desiredPositions, p=1, d=1, q=1)
+        self.apply_arima_model("Fintech Token", positionLimits, desiredPositions, p=2, d=1, q=2)
 
         # Adjust positions for budget
         desiredPositions = self.adjust_positions_for_budget(desiredPositions)
