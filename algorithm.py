@@ -128,8 +128,6 @@ class Algorithm():
             for inst in desiredPositions:
                 desiredPositions[inst] = int(desiredPositions[inst] * scaling_factor)
         return desiredPositions
-
-    
     
     def scale_positions(self, desiredPositions, currentPositions):
         total_pos_value, prices_current, pos_values = self.calc_current_total_trade_val(desiredPositions, currentPositions)
