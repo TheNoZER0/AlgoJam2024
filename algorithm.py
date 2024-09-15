@@ -92,8 +92,25 @@ class Algorithm():
         for instrument, positionLimit in positionLimits.items():
             desiredPositions[instrument] = 0
 
+<<<<<<< HEAD
         # Apply Regression Model for Coffee
         self.apply_regression_model(positionLimits, desiredPositions)
+=======
+        # IMPLEMENT CODE HERE TO DECIDE WHAT POSITIONS YOU WANT 
+        #######################################################################
+        # Buy thrifted jeans maximum amount
+        desiredPositions["UQ Dollar"] = self.get_uq_dollar_position(currentPositions["UQ Dollar"], positionLimits["UQ Dollar"])
+        
+        jeans_df = pd.DataFrame(self.data["Thrifted Jeans"])
+        jeans_df['EMA5'] = jeans_df[0].ewm(span=4, adjust=False).mean()
+        # Buy if the price is above the 5 day EMA
+        price = self.data['Thrifted Jeans'][-1]
+        ema = jeans_df['EMA5'].iloc[-1]
+        if price > ema:
+            desiredPositions["Thrifted Jeans"] = -positionLimits["Thrifted Jeans"]
+        else:
+            desiredPositions["Thrifted Jeans"] = positionLimits["Thrifted Jeans"]
+>>>>>>> bd25b7cffe6c578da8943ef9b2a7b45cd1b505f5
 
         # Apply ARIMA for Coffee Beans and Milk
         self.apply_arima_model("Coffee Beans", positionLimits, desiredPositions)
@@ -126,8 +143,8 @@ class Algorithm():
         else:
             desiredPosition = currentPosition + delta
 
-        print(f"OLD: {currentPosition}, NEW: {desiredPosition}")
-        
+        return desiredPosition
+
     def get_red_pens_position(self, currentPosition, limit):
         avg = sum(self.data["Red Pens"][-10:]) / 10
         price = self.get_current_price("Red Pens")
@@ -138,7 +155,5 @@ class Algorithm():
             desiredPosition = -1 * limit
         else:
             desiredPosition = currentPosition
-
-        print(f"Old position: {currentPosition}, new position: {desiredPosition}")
 
         return desiredPosition
