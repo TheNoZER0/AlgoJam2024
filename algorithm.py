@@ -114,9 +114,9 @@ class Algorithm():
         self.apply_arima_model("Milk", positionLimits, desiredPositions)
         self.apply_arima_model("Fun Drink", positionLimits, desiredPositions)
         self.apply_arima_model("Red Pens", positionLimits, desiredPositions, p=1, d=1, q=0)
-        get_red_pens_position = self.get_red_pens_position(currentPositions["Red Pens"], positionLimits["Red Pens"])
-        desiredPositions["Red Pens"] = get_red_pens_position
-        #self.apply_arima_model("Red Pens", positionLimits, desiredPositions, p=1, d=1, q=0)
+        # get_red_pens_position = self.get_red_pens_position(currentPositions["Red Pens"], positionLimits["Red Pens"])
+        # desiredPositions["Red Pens"] = get_red_pens_position
+        self.apply_arima_model("Red Pens", positionLimits, desiredPositions, p=1, d=1, q=0)
         self.apply_arima_model("Goober Eats", positionLimits, desiredPositions, p=1, d=1, q=1)
         self.apply_arima_model("Fintech Token", positionLimits, desiredPositions, p=2, d=1, q=2)
 
