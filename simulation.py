@@ -212,6 +212,7 @@ class TradingEngine:
             instrumentReturn = returns[-1]
             print(f"{instrument} Returns ($): {instrumentReturn}")
         print('#' * 50)
+        print(f"Max Total Budget Used: {max(self.pcTotalBudget)}%")
         # Store the lines for toggling visibility
         lines = []
         # Plot individual instrument returns
@@ -286,4 +287,5 @@ if __name__ == "__main__":
     algorithmInstance = Algorithm(engine.positions)
     engine.run_algorithms(algorithmInstance)
     engine.plot_returns()
+    print('Max budget used:', max(engine.pcTotalBudget))
 
