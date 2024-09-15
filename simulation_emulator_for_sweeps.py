@@ -283,9 +283,9 @@ def quantize_decimal(value, decimal_places=2):
 
 
 if __name__ == "__main__":
-    ema_spans = list(range(2, 31))
+    vars_to_sweep = list(range(1, 5)) # np.linspace(1, 20, 20)
     total_pnls = []
-    for spans in ema_spans:
+    for spans in vars_to_sweep:
         print(f"Running simulation for EMA span: {spans}")
 
         engine = TradingEngine()
@@ -299,10 +299,10 @@ if __name__ == "__main__":
     # engine.plot_returns()
     print("Simulation complete.")
     print("Total PNLs for each EMA span:", total_pnls)
-    print("Spans were:", ema_spans)
-    plt.plot(ema_spans, total_pnls)
-    plt.xlabel("EMA Span")
+    print("Variables swept were:", vars_to_sweep)
+    plt.plot(vars_to_sweep, total_pnls)
+    plt.xlabel("Variable Swept")
     plt.ylabel("Total PNL")
-    plt.title("Total PNL vs Rolling Average Span")
+    plt.title("Total PNL vs Variable Sweep")
     plt.grid()
     plt.show()

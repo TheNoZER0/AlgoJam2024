@@ -8,7 +8,7 @@ class Algorithm_Sweeper():
     # NO EDITS REQUIRED TO THESE FUNCTIONS
     ########################################################
     # FUNCTION TO SETUP ALGORITHM CLASS
-    def __init__(self, positions, spans):
+    def __init__(self, positions, variable):
         # Initialise data stores:
         # Historical data of all instruments
         self.data = {}
@@ -18,7 +18,7 @@ class Algorithm_Sweeper():
         self.day = 0
         # Initialise the current positions
         self.positions = positions
-        self.span = spans
+        self.var = variable
 
     # Helper function to fetch the current price of an instrument
     def get_current_price(self, instrument):
@@ -44,16 +44,41 @@ class Algorithm_Sweeper():
         #######################################################################
         # Buy thrifted jeans maximum amount
         # desiredPositions["UQ Dollar"] = self.get_uq_dollar_position(currentPositions["UQ Dollar"], positionLimits["UQ Dollar"])
-        
-        goober_df = pd.DataFrame(self.data["Goober Eats"])
-        goober_df['EMA'] = goober_df[0].rolling(self.span).mean()
         # Buy if the price is above the 5 day EMA
-        price = self.data['Goober Eats'][-1]
-        ema = goober_df['EMA'].iloc[-1]
-        if price > ema:
-            desiredPositions["Goober Eats"] = -positionLimits["Goober Eats"]
+        # price_drink = self.data['Fun Drink'][-1]
+        # ema = drinks_df['EMA'].iloc[-1]
+        # price_pens = self.data['Red Pens'][-1]
+
+
+        drinks_df = pd.DataFrame(self.data["Fun Drink"])
+        pens_df = pd.DataFrame(self.data["Red Pens"])
+
+        drinks_df['EMA'] = drinks_df[0].ewm(span=5, adjust=False).mean()
+        pens_df['EMA'] = pens_df[0].ewm(span=5, adjust=False).mean()
+
+        price_drink = self.data['Fun Drink'][-1]
+        price_pens = self.data['Red Pens'][-1]
+
+        ema_drink = drinks_df['EMA'].iloc[-1]
+        ema_pens = pens_df['EMA'].iloc[-1]
+
+        theo = ema_drink -0.025*ema_pens
+
+        if price_drink > theo:
+            desiredPositions["Fun Drink"] = -positionLimits["Fun Drink"]
         else:
-            desiredPositions["Goober Eats"] = positionLimits["Goober Eats"]
+            desiredPositions["Fun Drink"] = positionLimits["Fun Drink"]
+
+
+        # drink_df = pd.DataFrame(self.data["Fun Drink"])
+        # drink_df['EMA'] = drink_df[0].ewm(span=5, adjust=False).mean()
+        # # Buy if the price is above the 5 day EMA
+        # price = self.data['Fun Drink'][-1]
+        # ema = drink_df['EMA'].iloc[-1]
+        # if price > ema:
+        #     desiredPositions["Fun Drink"] = -positionLimits["Fun Drink"]
+        # else:
+        #     desiredPositions["Fun Drink"] = positionLimits["Fun Drink"]
 
         # desiredPositions["Red Pens"] = self.get_red_pens_position(currentPositions["Red Pens"], positionLimits["Red Pens"])
 
