@@ -19,6 +19,9 @@ class Algorithm_Sweeper():
         # Initialise the current positions
         self.positions = positions
         self.var = variable
+        # self.var = 0.033
+        # # self.var2 = variable2
+        # self.var2 = 5.33
 
     # Helper function to fetch the current price of an instrument
     def get_current_price(self, instrument):
@@ -56,13 +59,18 @@ class Algorithm_Sweeper():
         drinks_df['EMA'] = drinks_df[0].ewm(span=5, adjust=False).mean()
         pens_df['EMA'] = pens_df[0].ewm(span=5, adjust=False).mean()
 
+        drinks_df['EMA25'] = drinks_df[0].ewm(span=25, adjust=False).mean()
+        drinks_df['Cross'] = drinks_df['EMA'] - drinks_df['EMA25']
+
         price_drink = self.data['Fun Drink'][-1]
         price_pens = self.data['Red Pens'][-1]
 
         ema_drink = drinks_df['EMA'].iloc[-1]
         ema_pens = pens_df['EMA'].iloc[-1]
+        
+        cross_signal = drinks_df['Cross'].iloc[-1]
 
-        theo = ema_drink -0.025*ema_pens
+        theo = ema_drink -0.025*ema_pens + self.var* np.sign(cross_signal)*(abs(cross_signal)**(1/2))
 
         if price_drink > theo:
             desiredPositions["Fun Drink"] = -positionLimits["Fun Drink"]
@@ -140,3 +148,17 @@ class Algorithm_Sweeper():
             desiredPosition = currentPosition
 
         return desiredPosition
+    
+    def red_pens_state(self):
+        price = self.get_current_price("Red Pens")
+        states = ['Low', 'Rising', 'High', 'Falling']
+        state = 'Low'
+        if price < 2.25:
+            state = 'Low'
+        elif price > 2.43:
+            state = 'High'
+        elif price > 2.25 and price < 2.43 and (state == 'Low' or state == 'Rising'):
+            state = 'Rising'
+        elif price > 2.25 and price < 2.43 and (state == 'High' or state == 'Falling'):
+            state = 'Falling'
+        return state

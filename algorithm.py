@@ -40,20 +40,48 @@ class Algorithm():
 
         # IMPLEMENT CODE HERE TO DECIDE WHAT POSITIONS YOU WANT 
         #######################################################################
-        drink_df = pd.DataFrame(self.data["Fun Drink"])
-        drink_df['EMA'] = drink_df[0].ewm(span=5, adjust=False).mean()
-        # Buy if the price is above the 5 day EMA
-        price_drink = self.data['Fun Drink'][-1]
-        ema = drink_df['EMA'].iloc[-1]
-        price_pens = self.data['Red Pens'][-1]  
+        # drink_df = pd.DataFrame(self.data["Fun Drink"])
+        # drink_df['EMA'] = drink_df[0].ewm(span=5, adjust=False).mean()
+        # # Buy if the price is above the 5 day EMA
+        # price_drink = self.data['Fun Drink'][-1]
+        # ema = drink_df['EMA'].iloc[-1]
+        # price_pens = self.data['Red Pens'][-1]  
 
-        theo = ema - 0.021*price_pens
+        # theo = ema - 0.021*price_pens
+
+        self.get_drink_position(desiredPositions, positionLimits)
+
+
+        # if price_drink > theo:
+        #     desiredPositions["Fun Drink"] = -positionLimits["Fun Drink"]
+        # else:
+        #     desiredPositions["Fun Drink"] = positionLimits["Fun Drink"]
+
+        #######################################################################
+        # Return the desired positions
+        return desiredPositions
+    
+    def get_drink_position(self, desiredPositions, positionLimits):
+        drinks_df = pd.DataFrame(self.data["Fun Drink"])
+        pens_df = pd.DataFrame(self.data["Red Pens"])
+
+        drinks_df['EMA'] = drinks_df[0].ewm(span=5, adjust=False).mean()
+        pens_df['EMA'] = pens_df[0].ewm(span=5, adjust=False).mean()
+
+        drinks_df['EMA25'] = drinks_df[0].ewm(span=25, adjust=False).mean()
+        drinks_df['Cross'] = drinks_df['EMA'] - drinks_df['EMA25']
+
+        price_drink = self.data['Fun Drink'][-1]
+        price_pens = self.data['Red Pens'][-1]
+
+        ema_drink = drinks_df['EMA'].iloc[-1]
+        ema_pens = pens_df['EMA'].iloc[-1]
+        
+        cross_signal = drinks_df['Cross'].iloc[-1]
+
+        theo = ema_drink -0.025*ema_pens + 0.055*np.sign(cross_signal)*(abs(cross_signal)**(1/4))
 
         if price_drink > theo:
             desiredPositions["Fun Drink"] = -positionLimits["Fun Drink"]
         else:
             desiredPositions["Fun Drink"] = positionLimits["Fun Drink"]
-
-        #######################################################################
-        # Return the desired positions
-        return desiredPositions

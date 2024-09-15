@@ -283,8 +283,29 @@ def quantize_decimal(value, decimal_places=2):
 
 
 if __name__ == "__main__":
-    vars_to_sweep = list(range(1, 5)) # np.linspace(1, 20, 20)
+    vars_to_sweep = np.linspace(0, 0.1, 10)
+    # vars_to_sweep2 = np.linspace(1, 15, 10)
     total_pnls = []
+    # # create a matrix of all possible combinations of the variables to sweep
+    # vars_to_sweep = np.array(np.meshgrid(vars_to_sweep1, vars_to_sweep2)).T.reshape
+    # # make a matrix the same size as the vars_to_sweep matrix filled with zeros
+    # total_pnls = np.zeros(vars_to_sweep.shape)
+
+
+    # # iterate through each combination of the variables to sweep
+    # i = 0
+    # for spans in vars_to_sweep1:
+    #     for var2 in vars_to_sweep2:
+    #         print(f"Running simulation for EMA span: {spans}")
+
+    #         engine = TradingEngine()
+    #         algo_instance = Algorithm_Sweeper(engine.positions, spans)
+    #         engine.run_algorithms(algo_instance)
+    #         total_pnls.append(float(engine.totalPNL))
+    #         # store it in the corresponding index of the total_pnls matrix
+    #         total_pnls[i] = float(engine.totalPNL)
+    #         i+=1
+
     for spans in vars_to_sweep:
         print(f"Running simulation for EMA span: {spans}")
 
@@ -306,3 +327,49 @@ if __name__ == "__main__":
     plt.title("Total PNL vs Variable Sweep")
     plt.grid()
     plt.show()
+
+    # create a contour plot of the total_pnls matrix
+    # plt.contourf(vars_to_sweep1, vars_to_sweep2, total_pnls)
+    # plt.xlabel("Variable 1")
+    # plt.ylabel("Variable 2")
+    # plt.title("Total PNL Contour Plot")
+    # plt.colorbar()
+
+    # vars_to_sweep1 = np.linspace(0, 0.1, 10)
+    # vars_to_sweep2 = np.linspace(2, 7, 7)
+    
+    # # Create a matrix of all possible combinations of the variables to sweep
+    # vars_to_sweep = np.array(np.meshgrid(vars_to_sweep1, vars_to_sweep2)).T.reshape(-1, 2)
+    
+    # # Make a matrix the same size as the vars_to_sweep matrix filled with zeros
+    # total_pnls = np.zeros(vars_to_sweep.shape[0])
+
+    # # Iterate through each combination of the variables to sweep
+    # for i, (spans, var2) in enumerate(vars_to_sweep):
+    #     print(f"Running simulation for EMA span: {spans} and var2: {var2}")
+
+    #     engine = TradingEngine()
+    #     algo_instance = Algorithm_Sweeper(engine.positions, spans, var2)
+    #     engine.run_algorithms(algo_instance)
+        
+    #     # Store the result in the corresponding index of the total_pnls array
+    #     total_pnls[i] = float(engine.totalPNL)
+
+    # # Reshape total_pnls to match the grid shape for contour plotting
+    # total_pnls_matrix = total_pnls.reshape(len(vars_to_sweep2), len(vars_to_sweep1))
+
+    # # print the values that gave the highest total PNL
+    # max_pnl = np.max(total_pnls)
+    # max_pnl_index = np.argmax(total_pnls)
+    # max_pnl_vars = vars_to_sweep[max_pnl_index]
+    # print(f"Maximum total PNL: {max_pnl}")
+    # print(f"Variables that gave the maximum total PNL: {max_pnl_vars}")
+
+    # # Create a contour plot of the total_pnls matrix
+    # plt.contourf(vars_to_sweep1, vars_to_sweep2, total_pnls_matrix)
+    # plt.xlabel("vars_to_sweep1")
+    # plt.ylabel("vars_to_sweep2")
+    # plt.title("Total PNL vs Variable Sweep")
+    # plt.colorbar(label="Total PNL")
+    # plt.grid()
+    # plt.show()
