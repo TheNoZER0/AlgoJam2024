@@ -4,6 +4,14 @@ from sklearn.preprocessing import StandardScaler
 import pandas as pd
 from statsmodels.tsa.api import VAR, ARIMA
 from sklearn.preprocessing import StandardScaler
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
+import warnings
+
+# Suppress only ConvergenceWarnings from statsmodels
+warnings.simplefilter('ignore', ConvergenceWarning)
+
+# supress all warnings
+warnings.filterwarnings("ignore")
 
 # Custom trading Algorithm
 class Algorithm():
@@ -34,6 +42,46 @@ class Algorithm():
         return self.data[instrument][-1]
     ########################################################
 
+    # RETURN DESIRED POSITIONS IN DICT FORM
+    def get_positions(self):
+        # Get current position
+        currentPositions = self.positions
+        # Get position limits
+        positionLimits = self.positionLimits
+
+        # Declare a store for desired positions
+        desiredPositions = {}
+        # Initialise to hold positions for all instruments
+        for instrument, positionLimit in positionLimits.items():
+            desiredPositions[instrument] = 0
+
+        # Apply Regression Model for Coffee
+        self.apply_regression_model(positionLimits, desiredPositions)
+        # IMPLEMENT CODE HERE TO DECIDE WHAT POSITIONS YOU WANT 
+        #######################################################################
+        # Buy thrifted jeans maximum amount
+        desiredPositions["UQ Dollar"] = self.get_uq_dollar_position(currentPositions["UQ Dollar"], positionLimits["UQ Dollar"])
+        desiredPositions['Thrifted Jeans'] = self.get_jeans_position()
+        desiredPositions["Red Pens"] = self.get_red_pens_position(currentPositions["Red Pens"], positionLimits["Red Pens"])
+        desiredPositions["Goober Eats"] = self.get_goober_eats_position()
+        
+        # apply fun drink strategy
+        self.get_fun_drink_position(desiredPositions, positionLimits)
+        #desiredPositions["Fintech Token"] = self.get_token_position(currentPositions["Fintech Token"], positionLimits["Fintech Token"])
+        self.apply_arima_model("Fintech Token", positionLimits, desiredPositions, p=3, d=1, q=2)
+        # Apply Regression Model for Coffee
+        self.apply_regression_model(positionLimits, desiredPositions)
+        # Apply ARIMA for Coffee Beans and Milk
+        self.apply_arima_model("Coffee Beans", positionLimits, desiredPositions)
+        self.apply_arima_model("Milk", positionLimits, desiredPositions)
+
+        desiredPositions = self.scale_positions(desiredPositions, currentPositions)
+
+
+        return desiredPositions
+
+
+    ########################################################
     # HELPER METHODS
     
     # Regression model for Coffee
@@ -81,41 +129,7 @@ class Algorithm():
                 desiredPositions[inst] = int(desiredPositions[inst] * scaling_factor)
         return desiredPositions
 
-    # RETURN DESIRED POSITIONS IN DICT FORM
-    def get_positions(self):
-        # Get current position
-        currentPositions = self.positions
-        # Get position limits
-        positionLimits = self.positionLimits
-
-        # Declare a store for desired positions
-        desiredPositions = {}
-        # Initialise to hold positions for all instruments
-        for instrument, positionLimit in positionLimits.items():
-            desiredPositions[instrument] = 0
-
-        # Apply Regression Model for Coffee
-        self.apply_regression_model(positionLimits, desiredPositions)
-        # IMPLEMENT CODE HERE TO DECIDE WHAT POSITIONS YOU WANT 
-        #######################################################################
-        # Buy thrifted jeans maximum amount
-        desiredPositions["UQ Dollar"] = self.get_uq_dollar_position(currentPositions["UQ Dollar"], positionLimits["UQ Dollar"])
-        desiredPositions['Thrifted Jeans'] = self.get_jeans_position()
-        desiredPositions["Red Pens"] = self.get_red_pens_position(currentPositions["Red Pens"], positionLimits["Red Pens"])
-        desiredPositions["Goober Eats"] = self.get_goober_eats_position()
-        desiredPositions["Fun Drink"] = self.get_fun_drink_position()
-        #desiredPositions["Fintech Token"] = self.get_token_position(currentPositions["Fintech Token"], positionLimits["Fintech Token"])
-        self.apply_arima_model("Fintech Token", positionLimits, desiredPositions, p=3, d=1, q=2)
-        # Apply Regression Model for Coffee
-        self.apply_regression_model(positionLimits, desiredPositions)
-        # Apply ARIMA for Coffee Beans and Milk
-        self.apply_arima_model("Coffee Beans", positionLimits, desiredPositions)
-        self.apply_arima_model("Milk", positionLimits, desiredPositions)
-
-        desiredPositions = self.scale_positions(desiredPositions, currentPositions)
-
-
-        return desiredPositions
+    
     
     def scale_positions(self, desiredPositions, currentPositions):
         total_pos_value, prices_current, pos_values = self.calc_current_total_trade_val(desiredPositions, currentPositions)
@@ -177,18 +191,30 @@ class Algorithm():
 
         return total_pos_value, prices_current, pos_values
 
-    def get_fun_drink_position(self):
-        fun_df = pd.DataFrame(self.data["Fun Drink"])
-        fun_df['EMA'] = fun_df[0].ewm(span=5, adjust=False).mean()
-        # Buy if the price is above the 5 day EMA
-        price = self.data['Fun Drink'][-1]
-        ema = fun_df['EMA'].iloc[-1]
-        limit = self.positionLimits["Fun Drink"]
-        if price > ema:
-            desiredPositions = -limit
+    def get_fun_drink_position(self, desiredPositions, positionLimits):
+        drinks_df = pd.DataFrame(self.data["Fun Drink"])
+        pens_df = pd.DataFrame(self.data["Red Pens"])
+
+        drinks_df['EMA'] = drinks_df[0].ewm(span=5, adjust=False).mean()
+        pens_df['EMA'] = pens_df[0].ewm(span=5, adjust=False).mean()
+
+        drinks_df['EMA25'] = drinks_df[0].ewm(span=25, adjust=False).mean()
+        drinks_df['Cross'] = drinks_df['EMA'] - drinks_df['EMA25']
+
+        price_drink = self.data['Fun Drink'][-1]
+        price_pens = self.data['Red Pens'][-1]
+
+        ema_drink = drinks_df['EMA'].iloc[-1]
+        ema_pens = pens_df['EMA'].iloc[-1]
+        
+        cross_signal = drinks_df['Cross'].iloc[-1]
+
+        theo = ema_drink -0.025*ema_pens + 0.055*np.sign(cross_signal)*(abs(cross_signal)**(1/4))
+
+        if price_drink > theo:
+            desiredPositions["Fun Drink"] = -positionLimits["Fun Drink"]
         else:
-            desiredPositions = limit
-        return desiredPositions
+            desiredPositions["Fun Drink"] = positionLimits["Fun Drink"]
 
     def get_goober_eats_position(self):
         goober_df = pd.DataFrame(self.data["Goober Eats"])
@@ -213,9 +239,9 @@ class Algorithm():
         diff = avg - price
         boundary = max(self.data["UQ Dollar"]) - avg
 
-        if diff > 0.15:
+        if diff > 0.24:
             delta = limit * 2
-        elif diff < -0.15:
+        elif diff < -0.24:
             delta = -2 * limit
         else:
             delta = 0
