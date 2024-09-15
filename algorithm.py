@@ -2,6 +2,8 @@ import numpy as np
 from statsmodels.tsa.api import VAR, ARIMA
 from sklearn.preprocessing import StandardScaler
 import pandas as pd
+from statsmodels.tsa.api import VAR, ARIMA
+from sklearn.preprocessing import StandardScaler
 
 # Custom trading Algorithm
 class Algorithm():
@@ -33,7 +35,7 @@ class Algorithm():
     ########################################################
 
     # HELPER METHODS
-
+    
     # Regression model for Coffee
     def apply_regression_model(self, positionLimits, desiredPositions):
         if self.day >= self.lookback:
@@ -98,32 +100,110 @@ class Algorithm():
         #######################################################################
         # Buy thrifted jeans maximum amount
         desiredPositions["UQ Dollar"] = self.get_uq_dollar_position(currentPositions["UQ Dollar"], positionLimits["UQ Dollar"])
-        
-        jeans_df = pd.DataFrame(self.data["Thrifted Jeans"])
-        jeans_df['EMA5'] = jeans_df[0].ewm(span=4, adjust=False).mean()
-        # Buy if the price is above the 5 day EMA
-        price = self.data['Thrifted Jeans'][-1]
-        ema = jeans_df['EMA5'].iloc[-1]
-        if price > ema:
-            desiredPositions["Thrifted Jeans"] = -positionLimits["Thrifted Jeans"]
-        else:
-            desiredPositions["Thrifted Jeans"] = positionLimits["Thrifted Jeans"]
-
+        desiredPositions['Thrifted Jeans'] = self.get_jeans_position()
+        desiredPositions["Red Pens"] = self.get_red_pens_position(currentPositions["Red Pens"], positionLimits["Red Pens"])
+        desiredPositions["Goober Eats"] = self.get_goober_eats_position()
+        desiredPositions["Fun Drink"] = self.get_fun_drink_position()
+        #desiredPositions["Fintech Token"] = self.get_token_position(currentPositions["Fintech Token"], positionLimits["Fintech Token"])
+        self.apply_arima_model("Fintech Token", positionLimits, desiredPositions, p=3, d=1, q=2)
+        # Apply Regression Model for Coffee
+        self.apply_regression_model(positionLimits, desiredPositions)
         # Apply ARIMA for Coffee Beans and Milk
         self.apply_arima_model("Coffee Beans", positionLimits, desiredPositions)
         self.apply_arima_model("Milk", positionLimits, desiredPositions)
-        self.apply_arima_model("Fun Drink", positionLimits, desiredPositions)
-        self.apply_arima_model("Red Pens", positionLimits, desiredPositions, p=1, d=1, q=0)
-        # get_red_pens_position = self.get_red_pens_position(currentPositions["Red Pens"], positionLimits["Red Pens"])
-        # desiredPositions["Red Pens"] = get_red_pens_position
-        self.apply_arima_model("Red Pens", positionLimits, desiredPositions, p=1, d=1, q=0)
-        self.apply_arima_model("Goober Eats", positionLimits, desiredPositions, p=1, d=1, q=1)
-        self.apply_arima_model("Fintech Token", positionLimits, desiredPositions, p=2, d=1, q=2)
 
-        # Adjust positions for budget
-        desiredPositions = self.adjust_positions_for_budget(desiredPositions)
+        desiredPositions = self.scale_positions(desiredPositions, currentPositions)
+
 
         return desiredPositions
+    
+    def scale_positions(self, desiredPositions, currentPositions):
+        total_pos_value, prices_current, pos_values = self.calc_current_total_trade_val(desiredPositions, currentPositions)
+        # if the total trade value is greater than the total daily budget, scale down the trade values for tokens
+        if total_pos_value > self.totalDailyBudget:
+            # find value we need to reduce by
+            reduction_val = total_pos_value - self.totalDailyBudget
+            # first reduce tokens because they are inneficient, but big size
+            # find amount to reduce
+            reduction_Tokens = int(reduction_val/prices_current['Fintech Token'])
+            # if trades are positive, reduce trades, otherwise increase trades
+            if pos_values['Fintech Token'] > 0:
+                desiredPositions['Fintech Token'] -= min(reduction_Tokens, desiredPositions['Fintech Token'])
+            else:
+                desiredPositions['Fintech Token'] += min(reduction_Tokens, desiredPositions['Fintech Token'])               
+
+            total_pos_value, prices_current, pos_values = self.calc_current_total_trade_val(desiredPositions, currentPositions)
+            # if we are under the budget, return desired positions
+            if total_pos_value <= self.totalDailyBudget:
+                return desiredPositions
+
+            # loop through the products in the order pens, dollar, beans, coffee, milk, goober, fun drink, jeans to get under
+            for inst in ['Red Pens', 'UQ Dollar', 'Coffee Beans', 'Coffee', 'Milk', 'Goober Eats', 'Fun Drink', 'Thrifted Jeans']:
+                # calculate required to reduce
+                reduction_val = total_pos_value - self.totalDailyBudget
+                # find amount to reduce
+                reduction_inst = int(reduction_val/prices_current[inst])+1
+                # reduce the desired positions
+                if pos_values[inst] > 0:
+                    desiredPositions[inst] -= min(reduction_inst, desiredPositions[inst])
+                else:
+                    desiredPositions[inst] += min(reduction_inst, -desiredPositions[inst])
+
+                total_pos_value, prices_current, pos_values = self.calc_current_total_trade_val(desiredPositions, currentPositions)
+                
+                # if we are under the budget, break
+                if total_pos_value <= self.totalDailyBudget:
+                    return desiredPositions
+        return desiredPositions
+                
+    def calc_current_total_trade_val(self, desiredPositions, currentPositions):
+        # get prices for all instruments as a dictionary
+        prices_current = {inst: self.get_current_price(inst) for inst in desiredPositions}
+        # dict of trade values which is the trade amount multiplied by the current price
+        pos_values = {inst: abs(desiredPositions[inst] * prices_current[inst]) for inst in desiredPositions}
+        # total trade value is the sum of all trade values
+        total_pos_value = sum(pos_values.values())
+        # if self.day == 20:
+        #     # stop all code execution and print all variables
+        #     print('STOPPING')
+        #     print('prices_current', prices_current)
+        #     print('pos_values', pos_values)
+        #     print('total_pos_value', total_pos_value)
+        #     print('desiredPositions', desiredPositions)
+        #     print('currentPositions', currentPositions)
+        #     print('positionLimits', self.positionLimits)
+        #     # stop code execution
+        #     raise Exception('STOPPING')
+
+        return total_pos_value, prices_current, pos_values
+
+    def get_fun_drink_position(self):
+        fun_df = pd.DataFrame(self.data["Fun Drink"])
+        fun_df['EMA'] = fun_df[0].ewm(span=5, adjust=False).mean()
+        # Buy if the price is above the 5 day EMA
+        price = self.data['Fun Drink'][-1]
+        ema = fun_df['EMA'].iloc[-1]
+        limit = self.positionLimits["Fun Drink"]
+        if price > ema:
+            desiredPositions = -limit
+        else:
+            desiredPositions = limit
+        return desiredPositions
+
+    def get_goober_eats_position(self):
+        goober_df = pd.DataFrame(self.data["Goober Eats"])
+        goober_df['EMA'] = goober_df[0].ewm(span=13, adjust=False).mean()
+        # Buy if the price is above the 5 day EMA
+        price = self.data['Goober Eats'][-1]
+        ema = goober_df['EMA'].iloc[-1]
+        limit = self.positionLimits["Goober Eats"]
+        if price > ema:
+            desiredPositions = -limit
+        else:
+            desiredPositions = limit
+        return desiredPositions
+    
+    
 
     #######################################################################
 
@@ -161,3 +241,127 @@ class Algorithm():
             desiredPosition = currentPosition
 
         return desiredPosition
+    
+    def get_jeans_position(self):
+        jeans_df = pd.DataFrame(self.data["Thrifted Jeans"])
+        jeans_df['EMA5'] = jeans_df[0].ewm(span=2, adjust=False).mean()
+        # Buy if the price is above the 5 day EMA
+        price = self.data['Thrifted Jeans'][-1]
+        ema = jeans_df['EMA5'].iloc[-1]
+        if price > ema:
+            desiredPositions = -self.positionLimits["Thrifted Jeans"]
+        else:
+            desiredPositions = self.positionLimits["Thrifted Jeans"]
+        return desiredPositions
+
+
+        # Regression model for Coffee
+    def apply_regression_model(self, positionLimits, desiredPositions):
+        if self.day >= self.lookback:
+            # Get the most recent prices
+            coffee_bean_price = self.data['Coffee Beans'][-1]
+            milk_price = self.data['Milk'][-1]
+            # Use the regression equation
+            predicted_coffee_price = 1.5649 + 0.0077 * coffee_bean_price + 0.1565 * milk_price
+            current_coffee_price = self.get_current_price('Coffee')
+            # Decide on the position based on the predicted price
+            price_diff = predicted_coffee_price - current_coffee_price
+            if abs(price_diff) > self.threshold:
+                # Use full position limit
+                position = positionLimits['Coffee'] if price_diff > 0 else -positionLimits['Coffee']
+                desiredPositions['Coffee'] = position
+
+    # ARIMA model for trend-based instruments
+    def apply_arima_model(self, instrument, positionLimits, desiredPositions, p=1, d=1, q=1):
+        if self.day >= self.lookback:
+            data = np.array(self.data[instrument])
+            model = ARIMA(data, order=(p, d, q))
+            model_fit = model.fit()
+            forecast = model_fit.forecast(steps=1)[0]
+
+            current_price = self.get_current_price(instrument)
+            price_diff = forecast - current_price
+            if abs(price_diff) > self.threshold * current_price:
+                # Use full position limit
+                position = positionLimits[instrument] if price_diff > 0 else -positionLimits[instrument]
+                desiredPositions[instrument] = position
+    
+    def get_token_position(self, currentPosition, limit):
+
+        step = 35
+
+        if self.day < 10:
+            return currentPosition
+
+        # Split the list into two halves
+        first_half = self.data["Fintech Token"][-10:-5]
+        second_half = self.data["Fintech Token"][-5:]
+
+        # Calculate the gradients for each half
+        first_grad = self.calculate_gradient(first_half)
+        second_grad = self.calculate_gradient(second_half)
+
+        lim = 18
+
+        # Going from a stable section to jumping up
+        if abs(first_grad) < lim and second_grad > lim:
+            delta = step
+        # Going from a stable section to jumping down
+        elif abs(first_grad) < lim and second_grad < -1 * lim:
+            delta = -1 * step
+        else:
+            delta = 0
+
+        if currentPosition + delta > limit:
+            desiredPosition = limit
+        elif currentPosition + delta < -1 * limit:
+            desiredPosition = -1 * limit
+        else:
+            desiredPosition = currentPosition + delta
+
+        return desiredPosition
+    
+
+    # Function to calculate linear extrapolation
+    def linear_extrapolation(self, values):
+        if len(values) < 5:
+            return np.nan  # Not enough data to extrapolate
+        x = np.arange(5)
+        y = values[-6:-1]
+        coeffs = np.polyfit(x, y, 1)  # Linear fit (degree 1)
+        extrapolated_value = np.polyval(coeffs, 5)  # Extrapolate to the next point
+        return extrapolated_value
+    
+    def calculate_gradient(self, values):
+        x = np.arange(5)  # Create an array [0, 1, 2, 3, 4] for 5 prices
+        y = np.array(values)
+        # Fit a linear model: y = mx + c
+        A = np.vstack([x, np.ones(len(x))]).T
+        m, c = np.linalg.lstsq(A, y, rcond=None)[0]
+
+        return m
+
+    # # RETURN DESIRED POSITIONS IN DICT FORM
+    # def get_positions(self):
+    #     # Get current position
+    #     currentPositions = self.positions
+    #     # Get position limits
+    #     positionLimits = self.positionLimits
+
+    #     # Declare a store for desired positions
+    #     desiredPositions = {}
+    #     # Initialise to hold positions for all instruments
+    #     for instrument, positionLimit in positionLimits.items():
+    #         desiredPositions[instrument] = 0
+
+    #     # Apply Regression Model for Coffee
+    #     self.apply_regression_model(positionLimits, desiredPositions)
+
+    #     # Apply ARIMA for Coffee Beans and Milk
+    #     self.apply_arima_model("Coffee Beans", positionLimits, desiredPositions)
+    #     self.apply_arima_model("Milk", positionLimits, desiredPositions)
+
+    #     # Adjust positions for budget
+    #     desiredPositions = self.adjust_positions_for_budget(desiredPositions)
+
+    #     return desiredPositions
